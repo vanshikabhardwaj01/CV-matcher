@@ -1,6 +1,5 @@
 flask
 flask-cors
-spacy
 pdfplumber
 requests
 scikit-learn
