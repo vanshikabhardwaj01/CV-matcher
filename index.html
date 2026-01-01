@@ -90,7 +90,7 @@
         formData.append('resume', file);
         formData.append('job_description', document.getElementById('jd').value);
 
-        const res = await fetch('cv-matcher-kqdc-9yylkvzpb-vanshikabhardwajs-projects.vercel.app');
+        const res = await fetch('cv-matcher-kqdc-9yylkvzpb-vanshikabhardwajs-projects.vercel.app/match');
         const data = await res.json();
         storedData = data;
 
@@ -130,7 +130,7 @@
     }
 
     async function download() {
-        const res = await fetch('cv-matcher-kqdc-ds40ohzvg-vanshikabhardwajs-projects.vercel.app');
+        const res = await fetch('cv-matcher-kqdc-ds40ohzvg-vanshikabhardwajs-projects.vercel.app/match');
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = "Insight_Report.pdf"; a.click();
@@ -139,4 +139,5 @@
 </body>
 
 </html>
+
 
