@@ -90,7 +90,7 @@
         formData.append('resume', file);
         formData.append('job_description', document.getElementById('jd').value);
 
-        const res = await fetch('http://127.0.0.1:5000/match', { method: 'POST', body: formData });
+        const res = await fetch(cv-matcher-kqdc-9yylkvzpb-vanshikabhardwajs-projects.vercel.app);
         const data = await res.json();
         storedData = data;
 
@@ -141,4 +141,5 @@
     }
 </script>
 </body>
+
 </html>
