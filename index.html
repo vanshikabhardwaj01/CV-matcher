@@ -69,15 +69,17 @@
     async function download() {
         if (!storedData) return;
         // Same backend link for report
-        const res = await fetch('https://cv-matcher-kqdc-9yylkvzpb-vanshikabhardwajs-projects.vercel.app/download_report', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(storedData)
-        });
+// Isse replace karein:
+const res = await fetch('https://cv-matcher-pufpsn735-jdfw5wvfqjtcgg54m.vercel.app/download_report', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(storedData)
+});
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = "Insight_Report.pdf"; a.click();
     }
 </script>
+
 
 
