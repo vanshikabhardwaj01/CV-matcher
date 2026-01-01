@@ -1,12 +1,11 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 import pdfplumber
 import requests
 import math
 import re
-
+from flask_cors import CORS
 app = Flask(__name__)
-CORS(app)
+CORS(app) 
 
 # Manual TF-IDF and Cosine Similarity to save space
 def get_cosine_sim(str1, str2):
