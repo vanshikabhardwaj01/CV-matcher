@@ -16,10 +16,10 @@
 
         try {
             // Yahan dhyan do: POST method aur body add kiya hai
-            const res = await fetch('https://cv-matcher-kqdc-9yylkvzpb-vanshikabhardwajs-projects.vercel.app/match', {
-                method: 'POST',
-                body: formData
-            });
+        const res = await fetch('https://cv-matcher-pufpsn735-jdfw5wvfqjtcgg54m.vercel.app/match', {
+    method: 'POST',
+    body: formData
+});
 
             if (!res.ok) throw new Error("Server Error");
 
@@ -79,4 +79,5 @@
         const a = document.createElement('a'); a.href = url; a.download = "Insight_Report.pdf"; a.click();
     }
 </script>
+
 
