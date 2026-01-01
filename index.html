@@ -1,144 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>RESUMEMATE</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.35.0/apexcharts.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-        :root { --pink: #fb7185; --pink-light: #fff1f2; --slate: #1e293b; --bg: #fafafa; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: var(--slate); }
-        
-        /* Sidebar */
-        .sidebar { width: 320px; background: white; border-right: 1px solid #fce7f3; padding: 30px; overflow-y: auto; }
-        .content { flex: 1; padding: 30px; overflow-y: auto; display: grid; grid-template-columns: 1fr 340px; gap: 25px; }
-        
-        /* Pretty Cards */
-        .card { background: white; border-radius: 20px; padding: 25px; border: 1px solid #fce7f3; box-shadow: 0 10px 25px rgba(251, 113, 133, 0.05); margin-bottom: 20px; }
-        .badge { background: var(--pink-light); color: var(--pink); padding: 8px 15px; border-radius: 12px; font-weight: 700; font-size: 11px; margin: 4px; display: inline-block; text-transform: uppercase; }
-        .badge-missing { background: #f1f5f9; color: #94a3b8; padding: 8px 15px; border-radius: 12px; font-weight: 700; font-size: 11px; margin: 4px; display: inline-block; text-transform: uppercase; }
-        
-        .btn { background: var(--pink); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%; transition: 0.3s; margin-top: 10px; }
-        .btn:hover { opacity: 0.9; transform: translateY(-2px); }
-        
-        textarea, input { width: 100%; padding: 12px; border: 1px solid #f1f5f9; border-radius: 10px; margin-top: 8px; box-sizing: border-box; font-family: inherit; }
-        
-        /* Jobs List */
-        .job-card { background: white; border: 1px solid #fce7f3; padding: 18px; border-radius: 15px; margin-bottom: 12px; border-left: 5px solid var(--pink); transition: 0.3s; }
-        .job-card:hover { transform: translateX(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        
-        .roadmap-item { margin-bottom: 12px; padding: 10px; border-radius: 10px; background: #fdfdfd; border: 1px solid #f8fafc; }
-    </style>
-</head>
-<body>
-
-<div class="sidebar">
-    <h1 style="color: var(--pink); margin: 0; font-size: 24px;">CV MATCHER</h1>
-    <p style="font-size: 13px; color: #94a3b8;">let's see whats next</p>
-    
-    <div style="margin-top: 25px;">
-        <label><b>Work City</b></label><input type="text" id="loc" placeholder="e.g. Delhi or Remote">
-        <label style="display:block; margin-top:15px;"><b>Upload Resume (PDF)</b></label><input type="file" id="res">
-        <label style="display:block; margin-top:15px;"><b>Job Description / Role</b></label>
-        <textarea id="jd" rows="6" placeholder="Paste job details here..."></textarea>
-    </div>
-    
-    <button class="btn" onclick="analyze()">ANALYZE NOW</button>
-    <button id="dl" class="btn" style="background: var(--slate); display: none;" onclick="download()">DOWNLOAD PDF</button>
-</div>
-
-<div class="content">
-    <div>
-        <h2 style="margin:0;">Analysis <span style="color:var(--pink);">Center</span></h2>
-        
-        <div class="card">
-            <h3 style="margin-top:0; font-size:16px;">Fit Score</h3>
-            <div id="pie"></div>
-        </div>
-
-        <div class="card">
-            <h3 style="margin-top:0; font-size:16px;">Skill Map</h3>
-            <p style="font-size:12px; color:#94a3b8;">Skills detected in your profile:</p>
-            <div id="matched"></div>
-            
-            <p style="font-size:12px; color:#94a3b8; margin-top:20px;">Needed skills to learn:</p>
-            <div id="missing"></div>
-        </div>
-
-        <div class="card">
-            <h3 style="margin-top:0; font-size:16px;">Easy Learning Guide</h3>
-            <div id="roadmap">Upload your profile to see courses.</div>
-        </div>
-    </div>
-
-    <div>
-        <h3 style="margin-top:0; font-size:18px;">Live Opportunities</h3>
-        <div id="joblist">Waiting for analysis...</div>
-    </div>
-</div>
-
 <script>
     let chart = null, storedData = null;
 
     async function analyze() {
         const file = document.getElementById('res').files[0];
+        const jd = document.getElementById('jd').value;
+        
         if (!file) return alert("Please upload a resume first!");
 
         document.getElementById('joblist').innerHTML = "<b>Finding real-time matches...</b>";
 
+        // FormData banana zaroori hai file bhejne ke liye
         const formData = new FormData();
         formData.append('resume', file);
-        formData.append('job_description', document.getElementById('jd').value);
+        formData.append('job_description', jd);
 
-        const res = await fetch('https://cv-matcher-kqdc-9yylkvzpb-vanshikabhardwajs-projects.vercel.app/match');
-        const data = await res.json();
-        storedData = data;
+        try {
+            // Yahan dhyan do: POST method aur body add kiya hai
+            const res = await fetch('https://cv-matcher-kqdc-9yylkvzpb-vanshikabhardwajs-projects.vercel.app/match', {
+                method: 'POST',
+                body: formData
+            });
 
-        // Score Chart
-        if(chart) chart.destroy();
-        chart = new ApexCharts(document.querySelector("#pie"), {
-            series: [data.score, 100 - data.score],
-            chart: { type: 'donut', height: 250 },
-            colors: ['#fb7185', '#f1f5f9'],
-            labels: ['Match', 'Gap'],
-            plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Fit Score', formatter: () => data.score + '%' } } } } }
-        });
-        chart.render();
+            if (!res.ok) throw new Error("Server Error");
 
-        // Skill Badges
-        document.getElementById('matched').innerHTML = data.matched_skills.map(s => `<span class="badge">${s}</span>`).join('') || "No skills found.";
-        document.getElementById('missing').innerHTML = data.missing_skills.map(s => `<span class="badge-missing">${s}</span>`).join('') || "No gaps found!";
-        
-        // Learning Roadmap Logic
-        document.getElementById('roadmap').innerHTML = data.missing_skills.map(s => `
-            <div class="roadmap-item">
-                <b style="color:var(--pink); font-size:14px;">Master ${s.toUpperCase()}</b><br>
-                <a href="https://www.youtube.com/results?search_query=learn+${s}+course" target="_blank" style="font-size:12px; color:var(--slate); text-decoration:none;">Watch Free Tutorial →</a>
-            </div>
-        `).join('') || "Your profile matches all required skills!";
+            const data = await res.json();
+            storedData = data;
 
-        // Job List Rendering
-        document.getElementById('joblist').innerHTML = data.recommendations.map(j => `
-            <div class="job-card">
-                <b style="color:var(--pink); font-size:14px;">${j.title}</b><br>
-                <small style="color:#94a3b8;">${j.company}</small><br>
-                <a href="${j.link}" target="_blank" style="font-size:11px; color:var(--slate); font-weight:800; text-decoration:none; display:inline-block; margin-top:8px;">Apply Now →</a>
-            </div>
-        `).join('') || "No matching jobs found.";
+            // Fit Score Chart update
+            if(chart) chart.destroy();
+            chart = new ApexCharts(document.querySelector("#pie"), {
+                series: [data.score, 100 - data.score],
+                chart: { type: 'donut', height: 250 },
+                colors: ['#fb7185', '#f1f5f9'],
+                labels: ['Match', 'Gap'],
+                plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Fit Score', formatter: () => data.score + '%' } } } } }
+            });
+            chart.render();
 
-        document.getElementById('dl').style.display = 'block';
+            // Skills Display
+            document.getElementById('matched').innerHTML = data.matched_skills.map(s => `<span class="badge">${s}</span>`).join('') || "No skills found.";
+            document.getElementById('missing').innerHTML = data.missing_skills.map(s => `<span class="badge-missing">${s}</span>`).join('') || "No gaps found!";
+            
+            // Learning Roadmap
+            document.getElementById('roadmap').innerHTML = data.missing_skills.map(s => `
+                <div class="roadmap-item">
+                    <b style="color:var(--pink); font-size:14px;">Master ${s.toUpperCase()}</b><br>
+                    <a href="https://www.youtube.com/results?search_query=learn+${s}+course" target="_blank" style="font-size:12px; color:var(--slate); text-decoration:none;">Watch Free Tutorial →</a>
+                </div>
+            `).join('') || "Your profile matches all required skills!";
+
+            // Live Jobs
+            document.getElementById('joblist').innerHTML = data.recommendations.map(j => `
+                <div class="job-card">
+                    <b style="color:var(--pink); font-size:14px;">${j.title}</b><br>
+                    <small style="color:#94a3b8;">${j.company}</small><br>
+                    <a href="${j.link}" target="_blank" style="font-size:11px; color:var(--slate); font-weight:800; text-decoration:none; display:inline-block; margin-top:8px;">Apply Now →</a>
+                </div>
+            `).join('') || "No matching jobs found.";
+
+            document.getElementById('dl').style.display = 'block';
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('joblist').innerHTML = "<b style='color:red;'>Error connecting to server!</b>";
+        }
     }
 
     async function download() {
-        const res = await fetch('https://cv-matcher-kqdc-ds40ohzvg-vanshikabhardwajs-projects.vercel.app/match');
+        if (!storedData) return;
+        // Same backend link for report
+        const res = await fetch('https://cv-matcher-kqdc-9yylkvzpb-vanshikabhardwajs-projects.vercel.app/download_report', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(storedData)
+        });
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = "Insight_Report.pdf"; a.click();
     }
 </script>
-</body>
-
-</html>
-
-
-
