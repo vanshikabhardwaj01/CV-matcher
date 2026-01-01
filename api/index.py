@@ -1,65 +1,60 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-import os
-import io
-from fpdf import FPDF
-from ai_matcher import match_resume
+import pdfplumber
+import requests
+import math
+import re
 
 app = Flask(__name__)
 CORS(app)
 
-UPLOAD_FOLDER = "uploads"
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# Manual TF-IDF and Cosine Similarity to save space
+def get_cosine_sim(str1, str2):
+    def get_vec(s):
+        words = re.findall(r'\w+', s.lower())
+        return {w: words.count(w) for w in set(words)}
+    v1, v2 = get_vec(str1), get_vec(str2)
+    common = set(v1.keys()) & set(v2.keys())
+    numerator = sum(v1[x] * v2[x] for x in common)
+    sum1 = sum(v1[x]**2 for x in v1.keys())
+    sum2 = sum(v2[x]**2 for x in v2.keys())
+    denominator = math.sqrt(sum1) * math.sqrt(sum2)
+    return (numerator / denominator) if denominator else 0.0
 
-@app.route("/match", methods=["POST"])
-def match():
+def fetch_real_jobs(skills_list):
+    APP_ID = "8dbb7963"
+    APP_KEY = "8f6ae7284b44a01cd9a5ba3527851870"
+    query = " ".join(skills_list[:2]) if skills_list else "Software Developer"
+    url = f"https://api.adzuna.com/v1/api/jobs/in/search/1?app_id={APP_ID}&app_key={APP_KEY}&results_per_page=6&what={query}"
     try:
-        if 'resume' not in request.files:
-            return jsonify({"error": "No file"}), 400
-        
-        resume = request.files["resume"]
-        jd = request.form.get("job_description", "")
-        
-        resume_path = os.path.join(UPLOAD_FOLDER, resume.filename)
-        resume.save(resume_path)
-        
-        # ai_matcher se analysis lana
-        result = match_resume(resume_path, jd)
-        return jsonify(result)
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"error": str(e)}), 500
+        r = requests.get(url, timeout=5).json()
+        return [{"title": j['title'].replace("<strong>","").replace("</strong>",""), 
+                 "company": j['company']['display_name'], "link": j['redirect_url']} for j in r.get('results', [])]
+    except: return []
 
-@app.route("/download_report", methods=["POST"])
-def download_report():
-    data = request.json
-    pdf = FPDF()
-    pdf.add_page()
+@app.route('/match', methods=['POST'])
+def match():
+    resume = request.files['resume']
+    job_desc = request.form.get('job_description', '')
     
-    pdf.set_font("Arial", 'B', 20)
-    pdf.set_text_color(251, 113, 133) # Pink Color
-    pdf.cell(200, 20, "AI Career Analysis Report", ln=True, align='C')
+    with pdfplumber.open(resume) as pdf:
+        resume_text = " ".join([p.extract_text() for p in pdf.pages if p.extract_text()])
     
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", 'B', 14)
-    pdf.cell(200, 10, f"Match Score: {data.get('score', 0)}%", ln=True)
+    skill_bank = ["python", "sql", "java", "javascript", "html", "css", "react", "node", "flask", "aws", "git", "api"]
+    found_in_resume = [s for s in skill_bank if s.lower() in resume_text.lower()]
     
-    pdf.ln(10)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(200, 10, "Skills Found:", ln=True)
-    pdf.set_font("Arial", '', 11)
-    pdf.multi_cell(0, 10, ", ".join(data.get('matched_skills', [])).upper())
+    required = [s for s in skill_bank if s.lower() in job_desc.lower()]
+    matched = [s for s in required if s in found_in_resume] if required else found_in_resume
+    missing = [s for s in required if s not in found_in_resume]
     
-    pdf.ln(5)
-    pdf.cell(200, 10, "Missing Skills:", ln=True)
-    pdf.multi_cell(0, 10, ", ".join(data.get('missing_skills', [])).upper())
+    score = round(get_cosine_sim(resume_text, job_desc if job_desc else resume_text) * 100, 2)
+    
+    return jsonify({
+        "score": score,
+        "matched_skills": matched,
+        "missing_skills": missing,
+        "recommendations": fetch_real_jobs(matched)
+    })
 
-    output = io.BytesIO()
-    pdf_content = pdf.output(dest='S').encode('latin-1')
-    output.write(pdf_content)
-    output.seek(0)
-    return send_file(output, as_attachment=True, download_name="Report.pdf", mimetype='application/pdf')
-
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+@app.route('/')
+def home(): return "API is running!"
